@@ -2385,10 +2385,10 @@ function ManualQuestionEditor({ defaultCategory, initialData = null, onSave, onC
   const [mediaCaption, setMediaCaption] = useState(initialData?.mediaCaption || '');
   const [chartTitle, setChartTitle] = useState(initialData?.chartData?.title || 'Grafik Data Pengamatan');
   const [chartLabelsStr, setChartLabelsStr] = useState(
-    initialData?.chartData?.labels ? initialData.chartData.labels.join(', ') : 'Kelompok A, Kelompok B, Kelompok C, Kelompok D'
+    initialData?.chartData?.labels ? initialData?.chartData.labels.join(', ') : 'Kelompok A, Kelompok B, Kelompok C, Kelompok D'
   );
   const [chartValuesStr, setChartValuesStr] = useState(
-    initialData?.chartData?.values ? initialData.chartData.values.join(', ') : '40, 75, 60, 90'
+    initialData?.chartData?.values ? initialData?.chartData.values.join(', ') : '40, 75, 60, 90'
   );
 
   // Options State for Single & Complex
@@ -2876,12 +2876,13 @@ function BulkUploadQuestionPanel({ defaultCategory, onImportQuestions }) {
 
 function GeminiQuestionGeneratorModal({ defaultCategory, settings, onSaveGenerated, notify }) {
   const [category, setCategory] = useState(defaultCategory);
-  const [topic, setTopic] = useState('Ekosistem, Energi Terbarukan & Pelestarian Alam');
+  const [topic, setTopic] = useState('Sistem Pernapasan Manusia');
   const [difficulty, setDifficulty] = useState('HOTS');
   const [qType, setQType] = useState('single'); // 'single' | 'complex' | 'matching' | 'true_false'
   const [count, setCount] = useState(2);
-  const [mediaPreference, setMediaPreference] = useState('mixed'); // 'none' | 'image' | 'chart' | 'video' | 'mixed'
+  const [mediaPreference, setMediaPreference] = useState('image'); // 'none' | 'image' | 'chart' | 'video' | 'mixed'
   const [loading, setLoading] = useState(false);
+  const [regeneratingImgIdx, setRegeneratingImgIdx] = useState(null);
   const [previewQuestions, setPreviewQuestions] = useState([]);
   const [editingPreviewIndex, setEditingPreviewIndex] = useState(null);
 
@@ -2935,59 +2936,87 @@ function GeminiQuestionGeneratorModal({ defaultCategory, settings, onSaveGenerat
     throw new Error(lastError);
   };
 
-  // Kompresi dataURL gambar agar ringan & aman disimpan di localStorage
-  const compressDataUrl = (rawDataUrl) =>
-    new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        try {
-          const maxW = 760;
-          const scale = img.width > maxW ? maxW / img.width : 1;
-          const canvas = document.createElement('canvas');
-          canvas.width = Math.round(img.width * scale);
-          canvas.height = Math.round(img.height * scale);
-          const ctx = canvas.getContext('2d');
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          resolve(canvas.toDataURL('image/jpeg', 0.85));
-        } catch {
-          resolve(rawDataUrl);
-        }
-      };
-      img.onerror = () => resolve(rawDataUrl);
-      img.src = rawDataUrl;
-    });
+  // Pencarian Gambar Ensiklopedia Akurat dari Wikimedia Commons
+  const searchWikimediaEducationalImage = async (englishSearchTerms = [], skipIndex = 0) => {
+    for (const term of englishSearchTerms) {
+      if (!term || term.trim().length < 3) continue;
+      try {
+        const apiUrl = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(
+          `filetype:bitmap|drawing ${term.trim()}`
+        )}&gsrnamespace=6&gsrlimit=8&prop=imageinfo&iiprop=url|mime|size&iiurlwidth=720&format=json&origin=*`;
 
-  // Fallback cerdas: jika model raster tidak aktif di API Key, buat ilustrasi vektor SVG edukatif khusus topik soal
+        const res = await fetch(apiUrl);
+        if (!res.ok) continue;
+        const data = await res.json();
+        const pages = data?.query?.pages;
+        if (!pages) continue;
+
+        const validCandidates = Object.values(pages)
+          .filter((page) => {
+            const title = (page?.title || '').toLowerCase();
+            const info = page?.imageinfo?.[0];
+            if (!info) return false;
+            // Filter ketat agar tidak mengambil ikon, bendera, foto orang acak, atau buah yang tidak relevan
+            const blockedWords = ['icon', 'logo', 'flag', 'symbol', 'portrait', 'headshot', 'button', 'arrow'];
+            if (blockedWords.some((w) => title.includes(w))) return false;
+            if ((info.width || 0) < 200 || (info.height || 0) < 150) return false;
+            return Boolean(info.thumburl || info.url);
+          })
+          .sort((a, b) => (a.index || 0) - (b.index || 0));
+
+        if (validCandidates.length > 0) {
+          const picked = validCandidates[skipIndex % validCandidates.length];
+          const info = picked.imageinfo[0];
+          return info.thumburl || info.url;
+        }
+      } catch {
+        // Lanjut ke kata kunci cadangan berikutnya
+      }
+    }
+    return null;
+  };
+
+  // Generator Diagram Vektor SVG Edukatif Berlabel Bahasa Indonesia
   const generateCustomSvgDiagram = async (questionObj, topicStr, catStr, apiKey) => {
     try {
       const svgPayload = {
         contents: [{
           role: 'user',
           parts: [{
-            text: `Buatkan ilustrasi diagram edukatif SVG (viewBox="0 0 640 360") yang rapi, berwarna cerah, dan akurat untuk soal SD berikut:
+            text: `Buatkan ilustrasi diagram edukatif SVG yang sangat jelas, rapi, berwarna cerah, dan akurat secara ilmiah untuk soal SD berikut:
 Mata Pelajaran: ${catStr}
-Topik: ${topicStr}
-Stimulus: ${questionObj.stimulus || ''}
+Topik Utama: ${topicStr}
+Stimulus Soal: ${questionObj.stimulus || ''}
 Pertanyaan: ${questionObj.question || ''}
 Deskripsi Visual: ${questionObj.mediaCaption || ''}
 
-Aturan ketat:
-- Gunakan elemen SVG standar (<rect>, <circle>, <ellipse>, <path>, <polygon>, <line>, <text>, <defs>, <linearGradient>) dengan latar belakang cerah yang sesuai tema (misal biru muda untuk air/ekosistem, putih bersih untuk diagram).
-- Gambar objek nyata yang disebut di soal secara jelas (misal ikan, tumbuhan air, matahari, panah rantai makanan, bangun datar, organ tubuh, dsb.) lengkap dengan label singkat bahasa Indonesia yang mudah dibaca.
-- JANGAN gunakan <image> eksternal.
-- Keluarkan HANYA kode <svg ...>...</svg> tanpa markdown atau penjelasan.`
+ATURAN WAJIB SVG:
+1. Tag pembuka WAJIB persis: <svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
+2. Buat latar belakang <rect width="640" height="360" rx="16" fill="#f8fafc"/>.
+3. Gambar diagram konsep/organ/objek yang persis diminta topik "${topicStr}" menggunakan bentuk geometris (<path>, <ellipse>, <circle>, <rect>, <polygon>, <line>) yang jelas dan proporsional.
+   - Jika topik Sistem Pernapasan Manusia: gambar batang trakea di tengah atas, cabang bronkus kiri & kanan, dua lobus paru-paru merah muda di kiri & kanan, gelembung alveolus, dan lengkungan otot diafragma di bawahnya, lengkap dengan garis penunjuk dan label teks Bahasa Indonesia (Hidung/Trakea, Bronkus, Paru-paru, Alveolus, Diafragma).
+4. Gunakan font-family="Arial, sans-serif" dengan ukuran huruf 13px-15px bold berwarna gelap (#0f172a) agar terbaca tajam oleh siswa SD.
+5. DILARANG memakai tag <image>, <script>, atau karakter & mentah (tulis "dan", bukan "&").
+6. Keluarkan HANYA kode <svg ...>...</svg> tanpa teks pembuka/penutup.`
           }]
-        }]
+        }],
+        generationConfig: {
+          temperature: 0.2
+        }
       };
+
       const res = await callGoogleAiEndpoint('gemini-2.5-flash', svgPayload, apiKey);
       let svgText = res?.candidates?.[0]?.content?.parts?.[0]?.text || '';
       const match = svgText.match(/<svg[\s\S]*?<\/svg>/i);
       if (match) {
-        let cleanSvg = match[0];
+        let cleanSvg = match[0]
+          .replace(/<script[\s\S]*?<\/script>/gi, '')
+          .replace(/&(?!amp;|lt;|gt;|quot;|apos;)/g, 'dan');
         if (!cleanSvg.includes('xmlns=')) {
           cleanSvg = cleanSvg.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
+        }
+        if (!cleanSvg.includes('width=')) {
+          cleanSvg = cleanSvg.replace('<svg', '<svg width="640" height="360"');
         }
         return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(cleanSvg)}`;
       }
@@ -2997,80 +3026,87 @@ Aturan ketat:
     }
   };
 
-  // TAHAP 1 & 2: Refiner Prompt Visual + Generate Gambar Akurat Sesuai Materi
-  const generateEducationalImage = async (questionObj, topicStr, catStr, apiKey) => {
+  // PIPELINE GAMBAR AKURAT: Wikimedia Commons Ensiklopedia -> Fallback Diagram SVG Kustom
+  const generateEducationalImage = async (questionObj, topicStr, catStr, apiKey, variantOffset = 0) => {
     try {
-      // Tahap 1: Minta Gemini Flash menyusun prompt visual pedagogis bahasa Inggris yang presisi
-      const refinerPayload = {
+      // Minta Gemini menerjemahkan topik & isi soal menjadi 3 frasa pencarian ilmiah Wikimedia Commons
+      const queryPayload = {
         contents: [{
           role: 'user',
           parts: [{
-            text: `You are an educational textbook illustrator director for elementary school (SD).
-Create a concise, ultra-clear English image generation prompt (max 55 words) that visually illustrates the exact concept needed to answer this question:
+            text: `Translate the exact scientific/educational visual subject of this Indonesian elementary school (SD) question into 3 precise English Wikimedia Commons search phrases.
+
 Subject: ${catStr}
-Topic: ${topicStr}
-Stimulus: ${questionObj.stimulus || ''}
-Question: ${questionObj.question || ''}
-Visual Idea: ${questionObj.mediaCaption || ''}
+Main Topic: ${topicStr}
+Question Stimulus: ${questionObj.stimulus || ''}
+Question Text: ${questionObj.question || ''}
+Visual Description: ${questionObj.mediaCaption || ''}
 
 Rules:
-- Style: Clean educational textbook illustration, colorful flat vector art, bright natural colors, high scientific accuracy.
-- Depict the exact ecosystem, organisms, objects, or processes mentioned in the stimulus and question.
-- NO cluttered text paragraphs inside the image.
-- Output ONLY the English prompt.`
+- Focus strictly on the main scientific/educational subject (e.g. for "Sistem Pernapasan Manusia", output ["Human respiratory system diagram", "Respiratory system anatomy", "Lungs trachea bronchi diagram"]).
+- NEVER output generic single words like "apple", "fruit", "food", "nature", or unrelated objects.
+- Output ONLY a valid JSON array of 3 English strings.`
           }]
-        }]
-      };
-
-      const refinerRes = await callGoogleAiEndpoint('gemini-2.5-flash', refinerPayload, apiKey);
-      const refinedPrompt =
-        refinerRes?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ||
-        `Clean educational textbook illustration about ${topicStr}: ${questionObj.mediaCaption || questionObj.question}, colorful vector art, accurate science diagram`;
-
-      // Tahap 2A: Coba model Gemini Native Image Generation
-      const imgPayload = {
-        contents: [{
-          role: 'user',
-          parts: [{ text: refinedPrompt }]
         }],
         generationConfig: {
-          responseModalities: ['IMAGE', 'TEXT']
+          temperature: 0.1,
+          responseMimeType: 'application/json'
         }
       };
 
-      const imageModels = ['gemini-2.5-flash-image', 'gemini-2.0-flash-exp-image-generation', 'gemini-3.1-flash-image'];
-      for (const mName of imageModels) {
-        try {
-          const result = await callGoogleAiEndpoint(mName, imgPayload, apiKey, 'generateContent');
-          const part = result?.candidates?.[0]?.content?.parts?.find((p) => p.inlineData);
-          if (part?.inlineData?.data) {
-            const rawDataUrl = `data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`;
-            return await compressDataUrl(rawDataUrl);
-          }
-        } catch {
-          // Lanjut ke kandidat model gambar berikutnya
-        }
-      }
-
-      // Tahap 2B: Coba Imagen 3 (:predict)
+      let searchPhrases = [];
       try {
-        const imagenPayload = {
-          instances: [{ prompt: refinedPrompt }],
-          parameters: { sampleCount: 1, aspectRatio: '4:3' }
-        };
-        const imagenRes = await callGoogleAiEndpoint('imagen-3.0-generate-002', imagenPayload, apiKey, 'predict');
-        const b64 = imagenRes?.predictions?.[0]?.bytesBase64Encoded;
-        if (b64) {
-          return await compressDataUrl(`data:image/png;base64,${b64}`);
-        }
+        const qRes = await callGoogleAiEndpoint('gemini-2.5-flash', queryPayload, apiKey);
+        const qText = qRes?.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
+        const parsedPhrases = JSON.parse(qText.replace(/```json|```/gi, '').trim());
+        if (Array.isArray(parsedPhrases)) searchPhrases = parsedPhrases;
       } catch {
-        // Lanjut ke generator diagram vektor SVG khusus topik
+        searchPhrases = [`${topicStr} diagram`, topicStr];
       }
 
-      // Tahap 2C: Buat ilustrasi vektor SVG tematik khusus soal via gemini-2.5-flash
-      return await generateCustomSvgDiagram(questionObj, topicStr, catStr, apiKey);
+      // Jika variantOffset ganjil, prioritaskan Diagram SVG buatan AI; jika genap, cari foto/diagram Wikimedia dulu
+      if (variantOffset % 2 === 0) {
+        const wikiImg = await searchWikimediaEducationalImage(searchPhrases, Math.floor(variantOffset / 2));
+        if (wikiImg) return wikiImg;
+      }
+
+      // Fallback atau mode SVG kustom berlabel Bahasa Indonesia
+      const svgImg = await generateCustomSvgDiagram(questionObj, topicStr, catStr, apiKey);
+      if (svgImg) return svgImg;
+
+      // Cadangan terakhir jika SVG gagal
+      return await searchWikimediaEducationalImage(searchPhrases, variantOffset + 1);
     } catch {
       return await generateCustomSvgDiagram(questionObj, topicStr, catStr, apiKey);
+    }
+  };
+
+  // Regenerate gambar hanya untuk 1 butir soal di Preview
+  const handleRegenerateSingleImage = async (index) => {
+    const apiKey = (settings.geminiApiKey || '').trim();
+    if (!apiKey) {
+      notify('API Key Gemini belum diisi di menu Pengaturan.', 'error');
+      return;
+    }
+    const targetQ = previewQuestions[index];
+    if (!targetQ) return;
+
+    setRegeneratingImgIdx(index);
+    try {
+      const nextVariant = (targetQ._imgVariant || 0) + 1;
+      const newUrl = await generateEducationalImage(targetQ, topic, category, apiKey, nextVariant);
+      if (newUrl) {
+        setPreviewQuestions((prev) =>
+          prev.map((item, idx) =>
+            idx === index ? { ...item, mediaType: 'image', mediaUrl: newUrl, _imgVariant: nextVariant } : item
+          )
+        );
+        notify(`Gambar ilustrasi Soal #${index + 1} berhasil diperbarui!`);
+      } else {
+        notify('Tidak ditemukan gambar alternatif, silakan coba klik lagi atau upload manual.', 'error');
+      }
+    } finally {
+      setRegeneratingImgIdx(null);
     }
   };
 
@@ -3085,7 +3121,6 @@ Rules:
         return;
       }
 
-      // Tentukan daftar tipe media per nomor soal terlebih dahulu agar teks soal 100% sinkron dengan medianya
       const plannedMediaList = Array.from({ length: count }, (_, idx) =>
         mediaPreference === 'mixed' ? ['image', 'chart', 'video'][idx % 3] : mediaPreference
       );
@@ -3105,12 +3140,12 @@ Rencana Media Per Soal: ${mediaPlanDescription}.
 Aturan Ketat:
 1. Buat stimulus cerita/kasus nyata yang mendidik dan sesuai usia siswa SD kelas 5-6 tentang topik "${topic}".
 2. SINKRONISASI MEDIA WAJIB:
-   - Jika soal menggunakan media "image": stimulus dan pertanyaan WAJIB merujuk pada gambar ilustrasi (contoh: "Perhatikan gambar ilustrasi ekosistem air berikut..."), JANGAN menyebut grafik/diagram batang! Isi mediaCaption dengan deskripsi visual rinci objek yang harus digambar.
+   - Jika soal menggunakan media "image": stimulus dan pertanyaan WAJIB merujuk pada gambar ilustrasi materi "${topic}" (contoh: "Perhatikan gambar organ pernapasan manusia berikut..."), JANGAN menyebut grafik batang! Isi mediaCaption dengan keterangan gambar yang akurat sesuai "${topic}".
    - Jika soal menggunakan media "chart": stimulus dan pertanyaan WAJIB merujuk pada data grafik batang di chartData (title, labels minimal 4 label, values minimal 4 angka yang konsisten dengan kunci jawaban).
    - Jika soal menggunakan media "video": stimulus dan pertanyaan merujuk pada tayangan video edukasi tentang "${topic}".
    - Jika soal menggunakan media "none": seluruh informasi ada pada teks stimulus.
 3. WAJIB MENGISI OPSI & KUNCI JAWABAN LENGKAP sesuai tipe soal "${qType}":
-   - Jika "${qType}" adalah "single": WAJIB isi "options" dengan 4 kalimat pilihan jawaban yang bermakna (BUKAN "Opsi A/B/C/D") dan "correctIndex" (angka 0 sampai 3).
+   - Jika "${qType}" adalah "single": WAJIB isi "options" dengan 4 kalimat pilihan jawaban yang bermakna dan "correctIndex" (angka 0 sampai 3).
    - Jika "${qType}" adalah "complex": WAJIB isi "options" dengan 4-5 kalimat pilihan jawaban yang bermakna dan "complexCorrectIndices" (array minimal 2 indeks benar, misal [0, 2]).
    - Jika "${qType}" adalah "matching": WAJIB isi "leftItems" (3 konsep), "rightItems" (3 pasangan acak), dan "matchingPairs" (3 pasangan indeks).
    - Jika "${qType}" adalah "true_false": WAJIB isi "statements" (3 pernyataan) dan "trueFalseAnswers" (array 3 boolean).`;
@@ -3124,7 +3159,7 @@ Aturan Ketat:
         }],
         systemInstruction: { parts: [{ text: systemPrompt }] },
         generationConfig: {
-          temperature: 0.35,
+          temperature: 0.3,
           responseMimeType: 'application/json',
           responseSchema: {
             type: 'ARRAY',
@@ -3186,7 +3221,7 @@ Aturan Ketat:
 
           let resolvedImageUrl = '';
           if (chosenMedia === 'image') {
-            const generatedImg = await generateEducationalImage(item, topic, category, apiKey);
+            const generatedImg = await generateEducationalImage(item, topic, category, apiKey, idx * 2);
             resolvedImageUrl = generatedImg || '';
           }
 
@@ -3206,6 +3241,7 @@ Aturan Ketat:
                 ? CURATED_VIDEOS[category]
                 : '',
             mediaCaption: item.mediaCaption || `Ilustrasi Materi ${topic} • ${category}`,
+            _imgVariant: idx * 2,
             chartData:
               chosenMedia === 'chart'
                 ? item.chartData?.labels?.length
@@ -3267,7 +3303,7 @@ Aturan Ketat:
           </div>
           <div>
             <h3 className="text-lg font-extrabold text-[#0b2545]">Generator Soal Otomatis AI Gemini v3.1</h3>
-            <p className="text-xs text-slate-600">Dilengkapi ilustrasi 2-tahap presisi, grafik interaktif, dan editor manual sebelum disimpan.</p>
+            <p className="text-xs text-slate-600">Dilengkapi gambar ensiklopedia Wikimedia & diagram SVG edukasi presisi sesuai materi.</p>
           </div>
         </div>
         <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-extrabold">
@@ -3292,7 +3328,7 @@ Aturan Ketat:
             type="text"
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
-            placeholder="Contoh: Siklus Air, Pecahan Senilai, Teks Eksplanasi..."
+            placeholder="Contoh: Sistem Pernapasan Manusia, Siklus Air, Pecahan Senilai..."
             className="w-full p-2.5 rounded-xl border-2 border-indigo-200 text-xs font-semibold"
           />
         </div>
@@ -3319,8 +3355,8 @@ Aturan Ketat:
         <div>
           <label className="block text-xs font-bold mb-1">Aset Multimedia Stimulus</label>
           <select value={mediaPreference} onChange={(e) => setMediaPreference(e.target.value)} className="w-full p-2.5 rounded-xl border-2 border-indigo-300 bg-indigo-50 text-xs font-extrabold text-indigo-950">
+            <option value="image">Gambar / Diagram Edukasi Sesuai Materi</option>
             <option value="mixed">Kombinasi Lengkap (Gambar + Grafik + Video)</option>
-            <option value="image">Gambar Ilustrasi AI Sesuai Materi</option>
             <option value="chart">Grafik / Diagram Batang Interaktif</option>
             <option value="video">Video Pembelajaran (YouTube)</option>
             <option value="none">Teks Stimulus Saja</option>
@@ -3348,7 +3384,7 @@ Aturan Ketat:
           className="px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-emerald-600 hover:opacity-95 text-white font-extrabold text-xs shadow-lg flex items-center gap-2"
         >
           <Sparkles className={`w-4 h-4 text-lime-300 ${loading ? 'animate-spin' : ''}`} />
-          {loading ? 'AI Gemini Sedang Menyusun Soal & Ilustrasi Presisi...' : 'Generate Soal Sekarang'}
+          {loading ? 'AI Gemini Sedang Menyusun Soal & Gambar Materi...' : 'Generate Soal Sekarang'}
         </button>
       </div>
 
@@ -3357,7 +3393,7 @@ Aturan Ketat:
         <div className="pt-4 border-t-2 border-indigo-200 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h4 className="text-sm font-extrabold text-indigo-950">
-              Preview Hasil AI Gemini ({previewQuestions.length} Soal) — Klik "Edit Manual Soal Ini" untuk menyempurnakan
+              Preview Hasil AI Gemini ({previewQuestions.length} Soal)
             </h4>
             <button
               type="button"
@@ -3385,17 +3421,30 @@ Aturan Ketat:
                 />
               ) : (
                 <>
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="text-xs font-extrabold text-indigo-900">
                       Preview Soal #{i + 1} ({pq.mediaType})
                     </span>
-                    <button
-                      type="button"
-                      onClick={() => setEditingPreviewIndex(i)}
-                      className="px-3 py-1.5 rounded-lg bg-amber-100 hover:bg-amber-500 text-amber-900 hover:text-white font-bold text-xs flex items-center gap-1 transition"
-                    >
-                      <Edit3 className="w-3.5 h-3.5" /> Edit Manual Soal Ini
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {pq.mediaType === 'image' && (
+                        <button
+                          type="button"
+                          disabled={regeneratingImgIdx === i}
+                          onClick={() => handleRegenerateSingleImage(i)}
+                          className="px-3 py-1.5 rounded-lg bg-sky-100 hover:bg-sky-600 text-sky-900 hover:text-white font-bold text-xs flex items-center gap-1 transition"
+                        >
+                          <RefreshCw className={`w-3.5 h-3.5 ${regeneratingImgIdx === i ? 'animate-spin' : ''}`} />
+                          {regeneratingImgIdx === i ? 'Mencari Gambar...' : 'Ganti Gambar AI / SVG'}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setEditingPreviewIndex(i)}
+                        className="px-3 py-1.5 rounded-lg bg-amber-100 hover:bg-amber-500 text-amber-900 hover:text-white font-bold text-xs flex items-center gap-1 transition"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" /> Edit Manual Soal Ini
+                      </button>
+                    </div>
                   </div>
                   <p className="text-xs text-slate-700">{pq.stimulus}</p>
                   <MultimediaViewer question={pq} />
