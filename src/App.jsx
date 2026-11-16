@@ -187,6 +187,23 @@ const INITIAL_QUESTIONS = [
   }
 ];
 
+const TKA_SUBJECTS = [
+  'Matematika',
+  'Bahasa Indonesia',
+  'IPAS',
+  'Soal Karakter',
+  'Soal Lingkungan Belajar'
+];
+
+const DEFAULT_TKA_TOPICS = {
+  ALL_TKA: 'Asesmen Terpadu TKA SD (Numerasi, Literasi Membaca, Sains/Sosial, Karakter & Lingkungan Belajar)',
+  Matematika: 'Pecahan Senilai, Perbandingan, Luas & Keliling Bangun Datar, serta Pengolahan Data',
+  'Bahasa Indonesia': 'Ide Pokok Teks Informasi, Simpulan Bacaan Sastra/Fiksi, dan Kosakata Baku',
+  IPAS: 'Ekosistem, Siklus Air, Perubahan Energi, dan Keragaman Budaya Nusantara',
+  'Soal Karakter': 'Gotong Royong, Kebinekaan Global, Bernalar Kritis, dan Kejujuran di Sekolah',
+  'Soal Lingkungan Belajar': 'Iklim Keamanan Sekolah, Kolaborasi Guru-Siswa, dan Budaya Literasi Kelas'
+};
+
 // ============================================================================
 // 2. REUSABLE MULTIMEDIA RENDERER (IMAGE, INTERACTIVE SVG CHART, YOUTUBE VIDEO)
 // ============================================================================
@@ -328,7 +345,7 @@ const LimeEducationalBackdrop = () => (
 // ============================================================================
 
 export default function App() {
-  /// Helper untuk memuat data tersimpan dari browser (localStorage)
+  // Helper untuk memuat data tersimpan dari browser (localStorage)
   const loadSaved = (key, fallback) => {
     try {
       const saved = localStorage.getItem(key);
@@ -360,10 +377,11 @@ export default function App() {
   useEffect(() => { safeSave('cbt_sukomoro_students', students); }, [students]);
   useEffect(() => { safeSave('cbt_sukomoro_packages', packages); }, [packages]);
   useEffect(() => { safeSave('cbt_sukomoro_questions', questions); }, [questions]);
+
   // Auth & Navigation State (Tahan Refresh Halaman)
-  const [currentUser, setCurrentUser] = useState(() => loadSaved('cbt_sukomoro_current_user', null)); // { role: 'admin' | 'teacher' | 'student', data: ... }
-  const [loginTab, setLoginTab] = useState('student'); // 'student' | 'teacher' | 'admin'
-  const [adminNav, setAdminNav] = useState(() => loadSaved('cbt_sukomoro_admin_nav', 'dashboard')); // 'dashboard' | 'monitoring' | 'users' | 'packages' | 'bank' | 'results' | 'settings'
+  const [currentUser, setCurrentUser] = useState(() => loadSaved('cbt_sukomoro_current_user', null));
+  const [loginTab, setLoginTab] = useState('student');
+  const [adminNav, setAdminNav] = useState(() => loadSaved('cbt_sukomoro_admin_nav', 'dashboard'));
 
   useEffect(() => {
     if (currentUser) {
@@ -376,6 +394,7 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('cbt_sukomoro_admin_nav', JSON.stringify(adminNav));
   }, [adminNav]);
+
   const [toast, setToast] = useState(null);
   const [broadcastMessage, setBroadcastMessage] = useState(null);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
@@ -517,7 +536,6 @@ export default function App() {
         <header className="relative z-10 bg-[#0b2545] text-white shadow-xl border-b-4 border-lime-400">
           <div className="max-w-7xl mx-auto px-4 py-3.5 flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-3.5">
-              {/* Official Kemendikbud-Inspired Emblem SVG */}
               <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-sky-500 to-blue-700 border-2 border-lime-300 flex items-center justify-center shadow-lg">
                 <Shield className="w-7 h-7 text-white" />
               </div>
@@ -558,7 +576,7 @@ export default function App() {
                   Selamat Datang di Portal Ujian TKA & ANBK
                 </h2>
                 <p className="text-sm text-sky-100/90 leading-relaxed mb-6">
-                  Sistem Computer-Based Test (CBT) modern dengan Generator Soal AI Gemini v3.1, Anti-Cheat Fullscreen Protection, dan Penilaian Otomatis Multi-Tipe.
+                  Sistem Computer-Based Test (CBT) modern untuk seluruh mata pelajaran & komponen TKA (Matematika, Bahasa Indonesia, IPAS, Survei Karakter & Lingkungan Belajar) dengan Generator AI Gemini.
                 </p>
 
                 <div className="space-y-3 text-xs">
@@ -576,7 +594,7 @@ export default function App() {
 
               <div className="mt-6 pt-4 border-t border-white/15 text-[11px] text-sky-200 flex items-center justify-between">
                 <span>© {settings.schoolName}</span>
-                <span>v3.1 AI Powered</span>
+                <span>v4.1 AI TKA Full</span>
               </div>
             </div>
 
@@ -895,7 +913,7 @@ export default function App() {
 // ============================================================================
 
 function StudentLoginForm({ students, settings, onLoginSuccess, notify }) {
-  const [step, setStep] = useState('credentials'); // 'credentials' | 'confirm'
+  const [step, setStep] = useState('credentials');
   const [nisn, setNisn] = useState('0148291001');
   const [password, setPassword] = useState('12345');
   const [tokenInput, setTokenInput] = useState(settings.token);
@@ -1118,7 +1136,7 @@ function StudentExamPortal({
   const [currentIndex, setCurrentIndex] = useState(() => {
     try { return Number(localStorage.getItem(`${storagePrefix}_idx`)) || 0; } catch { return 0; }
   });
-  const [fontSize, setFontSize] = useState('base'); // 'sm' | 'base' | 'lg'
+  const [fontSize, setFontSize] = useState('base');
   const [doubtfulMap, setDoubtfulMap] = useState(() => {
     try { return JSON.parse(localStorage.getItem(`${storagePrefix}_doubt`)) || {}; } catch { return {}; }
   });
@@ -1132,6 +1150,7 @@ function StudentExamPortal({
   useEffect(() => {
     try { localStorage.setItem(`${storagePrefix}_doubt`, JSON.stringify(doubtfulMap)); } catch {}
   }, [doubtfulMap, storagePrefix]);
+
   const [isSubmitted, setIsSubmitted] = useState(student.status === 'selesai');
   const [confirmFinishModal, setConfirmFinishModal] = useState(false);
   const [unlockPinInput, setUnlockPinInput] = useState('');
@@ -1145,7 +1164,6 @@ function StudentExamPortal({
         startTime: new Date().toLocaleTimeString('id-ID')
       });
     }
-    // Attempt Fullscreen if Anti-Cheat is ON
     if (settings.antiCheatEnabled && document.documentElement.requestFullscreen) {
       document.documentElement.requestFullscreen().catch(() => {});
     }
@@ -1241,9 +1259,7 @@ function StudentExamPortal({
   const currentQuestion = questions[currentIndex];
   const fontClass = fontSize === 'sm' ? 'text-sm' : fontSize === 'lg' ? 'text-lg' : 'text-base';
 
-  // ============================================================================
   // ANTI-CHEAT RED LOCK SCREEN OVERLAY
-  // ============================================================================
   if (student.isBlocked && !isSubmitted) {
     return (
       <div className="fixed inset-0 z-50 bg-red-950 text-white flex items-center justify-center p-4">
@@ -1284,9 +1300,7 @@ function StudentExamPortal({
     );
   }
 
-  // ============================================================================
   // POST-EXAM SCORE & ANSWER REVIEW SCREEN
-  // ============================================================================
   if (isSubmitted) {
     const finalScore = student.score ?? calculateScore(answers);
     return (
@@ -1356,9 +1370,7 @@ function StudentExamPortal({
     );
   }
 
-  // ============================================================================
   // ACTIVE EXAM WORKSPACE (KEMENDIKBUD OFFICIAL NAVY HEADER + RIGHT NAV)
-  // ============================================================================
   return (
     <div
       className="min-h-screen flex flex-col bg-lime-100/80 select-none font-sans text-slate-800"
@@ -1485,22 +1497,18 @@ function StudentExamPortal({
         <div className="lg:col-span-9 bg-white rounded-2xl shadow-lg border-2 border-lime-300 p-5 md:p-7 flex flex-col justify-between">
           {currentQuestion ? (
             <div className={fontClass}>
-              {/* Stimulus Box */}
               {currentQuestion.stimulus && (
                 <div className="p-4 rounded-xl bg-slate-50 border-l-4 border-[#0b2545] mb-4 leading-relaxed text-slate-700">
                   {currentQuestion.stimulus}
                 </div>
               )}
 
-              {/* Multimedia Stimulus (Image / Chart / YouTube Video) */}
               <MultimediaViewer question={currentQuestion} />
 
-              {/* Question Stem */}
               <p className="font-bold text-slate-900 mb-5 leading-relaxed">
                 {currentQuestion.question}
               </p>
 
-              {/* ANSWER INPUT WIDGETS BASED ON 4 QUESTION TYPES */}
               {/* TYPE 1: SINGLE CHOICE */}
               {currentQuestion.type === 'single' && (
                 <div className="space-y-2.5">
@@ -1530,7 +1538,7 @@ function StudentExamPortal({
                 </div>
               )}
 
-              {/* TYPE 2: COMPLEX MULTIPLE CHOICE (CHECKBOX) */}
+              {/* TYPE 2: COMPLEX MULTIPLE CHOICE */}
               {currentQuestion.type === 'complex' && (
                 <div className="space-y-2.5">
                   <p className="text-xs font-bold text-emerald-800 mb-2">
@@ -1566,7 +1574,7 @@ function StudentExamPortal({
                 </div>
               )}
 
-              {/* TYPE 3: MATCHING (MENJODOHKAN) */}
+              {/* TYPE 3: MATCHING */}
               {currentQuestion.type === 'matching' && (
                 <div className="space-y-3">
                   <p className="text-xs font-bold text-emerald-800">
@@ -1813,7 +1821,6 @@ function DashboardOverview({ students, questions, packages, settings, notify, on
 
   return (
     <div className="space-y-6">
-      {/* Header & Quick Action Buttons */}
       <div className="bg-white/95 rounded-2xl p-5 shadow-lg border-2 border-lime-400 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-extrabold text-[#0b2545]">Dashboard Eksekutif TKA & ANBK</h2>
@@ -1843,7 +1850,6 @@ function DashboardOverview({ students, questions, packages, settings, notify, on
         </div>
       </div>
 
-      {/* 7 KPI Metric Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
         {kpiCards.map((kpi, idx) => {
           const Icon = kpi.icon;
@@ -1863,15 +1869,13 @@ function DashboardOverview({ students, questions, packages, settings, notify, on
         })}
       </div>
 
-      {/* Visual Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        {/* Category Distribution Bar Chart */}
         <div className="bg-white/95 rounded-2xl p-5 shadow-lg border-2 border-lime-300">
           <h3 className="text-sm font-extrabold text-[#0b2545] mb-4 flex items-center gap-2">
-            <BookOpen className="w-4 h-4 text-emerald-700" /> Sebaran Bank Soal per Kategori (5 Kategori Utama)
+            <BookOpen className="w-4 h-4 text-emerald-700" /> Sebaran Bank Soal per Komponen TKA (5 Komponen)
           </h3>
           <div className="space-y-3">
-            {['IPAS', 'Matematika', 'Bahasa Indonesia', 'Soal Karakter', 'Soal Lingkungan Belajar'].map((cat) => {
+            {TKA_SUBJECTS.map((cat) => {
               const count = questions.filter((q) => q.category === cat).length;
               const pct = Math.min(100, Math.round((count / Math.max(questions.length, 1)) * 100));
               return (
@@ -1889,7 +1893,6 @@ function DashboardOverview({ students, questions, packages, settings, notify, on
           </div>
         </div>
 
-        {/* Participant Status Visual Summary */}
         <div className="bg-white/95 rounded-2xl p-5 shadow-lg border-2 border-lime-300">
           <h3 className="text-sm font-extrabold text-[#0b2545] mb-4 flex items-center gap-2">
             <Users className="w-4 h-4 text-emerald-700" /> Status Pengerjaan & Kesiapan Rombel
@@ -1924,7 +1927,7 @@ function DashboardOverview({ students, questions, packages, settings, notify, on
 // ============================================================================
 
 function LiveMonitoringView({ students, setStudents, onBroadcast, notify }) {
-  const [filterTab, setFilterTab] = useState('all'); // 'all' | 'sedang_ujian' | 'selesai' | 'belum_mulai'
+  const [filterTab, setFilterTab] = useState('all');
   const [broadcastText, setBroadcastText] = useState('');
   const [massMinutes, setMassMinutes] = useState(10);
 
@@ -1952,9 +1955,7 @@ function LiveMonitoringView({ students, setStudents, onBroadcast, notify }) {
 
   return (
     <div className="space-y-5">
-      {/* Control Bar: Mass Time & Broadcast Message */}
       <div className="bg-white/95 rounded-2xl p-5 shadow-lg border-2 border-lime-400 grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Mass Time Control */}
         <div className="p-4 rounded-xl bg-lime-50 border border-lime-300 space-y-2">
           <h3 className="text-sm font-extrabold text-[#0b2545] flex items-center gap-2">
             <Clock className="w-4 h-4 text-emerald-700" /> Kontrol Waktu Masal (Peserta Sedang Ujian)
@@ -1984,7 +1985,6 @@ function LiveMonitoringView({ students, setStudents, onBroadcast, notify }) {
           </div>
         </div>
 
-        {/* Real-time Broadcast Message */}
         <div className="p-4 rounded-xl bg-sky-50 border border-sky-300 space-y-2">
           <h3 className="text-sm font-extrabold text-[#0b2545] flex items-center gap-2">
             <Send className="w-4 h-4 text-sky-700" /> Broadcast Pengumuman Real-Time ke Layar Siswa
@@ -2011,7 +2011,6 @@ function LiveMonitoringView({ students, setStudents, onBroadcast, notify }) {
         </div>
       </div>
 
-      {/* Filter Tabs & Live Participant Table */}
       <div className="bg-white/95 rounded-2xl p-5 shadow-lg border-2 border-lime-400">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <div className="flex flex-wrap gap-2">
@@ -2132,13 +2131,12 @@ function LiveMonitoringView({ students, setStudents, onBroadcast, notify }) {
 }
 
 // ============================================================================
-// 9. BANK SOAL & AI GEMINI v3.1 GENERATOR + RICH MANUAL EDITOR (WITH EDIT)
+// 9. BANK SOAL & AI GEMINI GENERATOR + RICH MANUAL EDITOR (WITH EDIT)
 // ============================================================================
 
 function QuestionBankManager({ questions, setQuestions, settings, notify }) {
-  const categories = ['IPAS', 'Matematika', 'Bahasa Indonesia', 'Soal Karakter', 'Soal Lingkungan Belajar'];
-  const [selectedCategory, setSelectedCategory] = useState('IPAS');
-  const [activeMode, setActiveMode] = useState('list'); // 'list' | 'manual' | 'edit' | 'upload' | 'ai'
+  const [selectedCategory, setSelectedCategory] = useState('Matematika');
+  const [activeMode, setActiveMode] = useState('list');
   const [editingQuestion, setEditingQuestion] = useState(null);
 
   const filteredQuestions = questions.filter((q) => q.category === selectedCategory);
@@ -2155,12 +2153,12 @@ function QuestionBankManager({ questions, setQuestions, settings, notify }) {
 
   return (
     <div className="space-y-5">
-      {/* Category Selector Pills (5 Main Categories) */}
+      {/* Category Selector Pills (5 Main TKA Components) */}
       <div className="bg-white/95 rounded-2xl p-5 shadow-lg border-2 border-lime-400">
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
           <div>
-            <h2 className="text-xl font-extrabold text-[#0b2545]">Bank Soal & Generator AI Gemini v3.1</h2>
-            <p className="text-xs text-slate-600">Pilih kategori mata pelajaran atau survei untuk mengelola & mengedit butir soal.</p>
+            <h2 className="text-xl font-extrabold text-[#0b2545]">Bank Soal & Generator AI Semua Pelajaran TKA</h2>
+            <p className="text-xs text-slate-600">Pilih mata pelajaran atau komponen TKA untuk mengelola & mengedit butir soal.</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
@@ -2185,14 +2183,14 @@ function QuestionBankManager({ questions, setQuestions, settings, notify }) {
               onClick={() => { setEditingQuestion(null); setActiveMode('ai'); }}
               className={`px-3.5 py-2 rounded-xl text-xs font-extrabold flex items-center gap-1.5 shadow ${activeMode === 'ai' ? 'bg-gradient-to-r from-purple-700 to-indigo-700 text-white' : 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white'}`}
             >
-              <Sparkles className="w-4 h-4 text-lime-300" /> Generate AI Gemini v3.1
+              <Sparkles className="w-4 h-4 text-lime-300" /> Generate AI Semua Pelajaran TKA
             </button>
           </div>
         </div>
 
         {/* 5 Category Tabs */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-          {categories.map((cat) => {
+          {TKA_SUBJECTS.map((cat) => {
             const count = questions.filter((q) => q.category === cat).length;
             const active = selectedCategory === cat;
             return (
@@ -2225,7 +2223,7 @@ function QuestionBankManager({ questions, setQuestions, settings, notify }) {
                 onClick={() => setActiveMode('ai')}
                 className="px-5 py-2.5 rounded-xl bg-indigo-600 text-white font-bold text-xs inline-flex items-center gap-2"
               >
-                <Sparkles className="w-4 h-4" /> Buat Soal Otomatis dengan AI Gemini v3.1
+                <Sparkles className="w-4 h-4" /> Buat Soal Otomatis dengan AI Gemini
               </button>
             </div>
           ) : (
@@ -2349,7 +2347,7 @@ function QuestionBankManager({ questions, setQuestions, settings, notify }) {
         />
       )}
 
-      {/* MODE 4: AI GEMINI v3.1 MULTIMEDIA QUESTION GENERATOR (WITH PREVIEW EDIT) */}
+      {/* MODE 4: AI GEMINI MULTIMEDIA QUESTION GENERATOR (SEMUA PELAJARAN TKA) */}
       {activeMode === 'ai' && (
         <GeminiQuestionGeneratorModal
           defaultCategory={selectedCategory}
@@ -2357,7 +2355,7 @@ function QuestionBankManager({ questions, setQuestions, settings, notify }) {
           onSaveGenerated={(genList) => {
             setQuestions((prev) => [...genList, ...prev]);
             setActiveMode('list');
-            notify(`${genList.length} soal hasil AI Gemini v3.1 berhasil ditambahkan ke Bank Soal!`);
+            notify(`${genList.length} soal hasil AI Gemini berhasil ditambahkan ke Bank Soal!`);
           }}
           notify={notify}
         />
@@ -2372,26 +2370,24 @@ function QuestionBankManager({ questions, setQuestions, settings, notify }) {
 
 function ManualQuestionEditor({ defaultCategory, initialData = null, onSave, onCancel }) {
   const [category, setCategory] = useState(initialData?.category || defaultCategory);
-  const [type, setType] = useState(initialData?.type || 'single'); // 'single' | 'complex' | 'matching' | 'true_false'
+  const [type, setType] = useState(initialData?.type || 'single');
   const [difficulty, setDifficulty] = useState(initialData?.difficulty || 'Sedang');
   const [weight, setWeight] = useState(initialData?.weight ?? 20);
   const [stimulus, setStimulus] = useState(initialData?.stimulus || '');
   const [question, setQuestion] = useState(initialData?.question || '');
   const [explanation, setExplanation] = useState(initialData?.explanation || '');
 
-  // Multimedia Upload State (Device FileReader or Google Drive / YouTube URL)
-  const [mediaType, setMediaType] = useState(initialData?.mediaType || 'none'); // 'none' | 'image' | 'chart' | 'video'
+  const [mediaType, setMediaType] = useState(initialData?.mediaType || 'none');
   const [mediaUrl, setMediaUrl] = useState(initialData?.mediaUrl || '');
   const [mediaCaption, setMediaCaption] = useState(initialData?.mediaCaption || '');
   const [chartTitle, setChartTitle] = useState(initialData?.chartData?.title || 'Grafik Data Pengamatan');
   const [chartLabelsStr, setChartLabelsStr] = useState(
-    initialData?.chartData?.labels ? initialData?.chartData.labels.join(', ') : 'Kelompok A, Kelompok B, Kelompok C, Kelompok D'
+    initialData?.chartData?.labels ? initialData.chartData.labels.join(', ') : 'Kelompok A, Kelompok B, Kelompok C, Kelompok D'
   );
   const [chartValuesStr, setChartValuesStr] = useState(
-    initialData?.chartData?.values ? initialData?.chartData.values.join(', ') : '40, 75, 60, 90'
+    initialData?.chartData?.values ? initialData.chartData.values.join(', ') : '40, 75, 60, 90'
   );
 
-  // Options State for Single & Complex
   const [options, setOptions] = useState(initialData?.options?.length ? initialData.options : ['', '', '', '']);
   const [singleCorrect, setSingleCorrect] = useState(
     initialData?.type === 'single' ? Number(initialData.correctAnswer ?? 0) : 0
@@ -2400,20 +2396,17 @@ function ManualQuestionEditor({ defaultCategory, initialData = null, onSave, onC
     initialData?.type === 'complex' && Array.isArray(initialData.correctAnswer) ? initialData.correctAnswer : [0]
   );
 
-  // Matching State (Menjodohkan)
   const [leftItems, setLeftItems] = useState(initialData?.leftItems?.length ? initialData.leftItems : ['Premis 1', 'Premis 2', 'Premis 3']);
   const [rightItems, setRightItems] = useState(initialData?.rightItems?.length ? initialData.rightItems : ['Pasangan A', 'Pasangan B', 'Pasangan C']);
   const [matchingMap, setMatchingMap] = useState(
     initialData?.type === 'matching' && initialData.correctAnswer ? initialData.correctAnswer : { '0': '0', '1': '1', '2': '2' }
   );
 
-  // True/False State
   const [statements, setStatements] = useState(initialData?.statements?.length ? initialData.statements : ['Pernyataan pertama...', 'Pernyataan kedua...']);
   const [tfAnswers, setTfAnswers] = useState(
     initialData?.type === 'true_false' && Array.isArray(initialData.correctAnswer) ? initialData.correctAnswer : [true, false]
   );
 
-  // Handle local device upload (Image / Video) via FileReader
   const handleLocalFileUpload = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -2470,12 +2463,11 @@ function ManualQuestionEditor({ defaultCategory, initialData = null, onSave, onC
         </button>
       </div>
 
-      {/* Metadata Row */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
         <div>
-          <label className="block text-xs font-bold mb-1">Kategori Soal</label>
+          <label className="block text-xs font-bold mb-1">Komponen / Mata Pelajaran</label>
           <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full p-2.5 rounded-xl border-2 border-lime-300 text-xs font-bold">
-            {['IPAS', 'Matematika', 'Bahasa Indonesia', 'Soal Karakter', 'Soal Lingkungan Belajar'].map((c) => (
+            {TKA_SUBJECTS.map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
@@ -2503,7 +2495,6 @@ function ManualQuestionEditor({ defaultCategory, initialData = null, onSave, onC
         </div>
       </div>
 
-      {/* Stimulus Text */}
       <div>
         <label className="block text-xs font-bold mb-1">Teks Stimulus / Wacana / Rumus LaTeX (Opsional)</label>
         <textarea
@@ -2515,7 +2506,6 @@ function ManualQuestionEditor({ defaultCategory, initialData = null, onSave, onC
         />
       </div>
 
-      {/* MULTIMEDIA UPLOAD SECTION (PERANGKAT LOKAL / GOOGLE DRIVE / YOUTUBE / DIAGRAM) */}
       <div className="p-4 rounded-2xl bg-lime-50 border-2 border-lime-300 space-y-3">
         <label className="block text-xs font-extrabold text-[#0b2545]">
           Lampiran Multimedia Stimulus (Upload dari Perangkat, Google Drive, Diagram/Grafik, atau Video YouTube)
@@ -2622,7 +2612,6 @@ function ManualQuestionEditor({ defaultCategory, initialData = null, onSave, onC
         )}
       </div>
 
-      {/* Main Question Stem */}
       <div>
         <label className="block text-xs font-bold mb-1">Pertanyaan Utama *</label>
         <textarea
@@ -2635,7 +2624,6 @@ function ManualQuestionEditor({ defaultCategory, initialData = null, onSave, onC
         />
       </div>
 
-      {/* DYNAMIC ANSWER INPUTS BY TYPE */}
       {(type === 'single' || type === 'complex') && (
         <div className="space-y-2">
           <label className="block text-xs font-extrabold text-[#0b2545]">
@@ -2681,7 +2669,6 @@ function ManualQuestionEditor({ defaultCategory, initialData = null, onSave, onC
         </div>
       )}
 
-      {/* MATCHING (MENJODOHKAN) MANUAL BUILDER */}
       {type === 'matching' && (
         <div className="p-4 rounded-2xl bg-sky-50 border border-sky-300 space-y-3">
           <div className="flex items-center justify-between">
@@ -2741,7 +2728,6 @@ function ManualQuestionEditor({ defaultCategory, initialData = null, onSave, onC
         </div>
       )}
 
-      {/* TRUE / FALSE MANUAL BUILDER */}
       {type === 'true_false' && (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
@@ -2814,8 +2800,6 @@ function ManualQuestionEditor({ defaultCategory, initialData = null, onSave, onC
 // ============================================================================
 
 function BulkUploadQuestionPanel({ defaultCategory, onImportQuestions }) {
-  const [rawJsonOrCsv, setRawJsonOrCsv] = useState('');
-
   const handleSampleTemplateImport = () => {
     const sampleBatch = [
       {
@@ -2871,16 +2855,16 @@ function BulkUploadQuestionPanel({ defaultCategory, onImportQuestions }) {
 }
 
 // ============================================================================
-// 12. AI GEMINI v3.1 MULTIMEDIA QUESTION GENERATOR (HIGH ACCURACY + PREVIEW EDIT)
+// 12. AI GEMINI MULTIMEDIA QUESTION GENERATOR (ALL TKA SUBJECTS + ACCURATE ART)
 // ============================================================================
 
 function GeminiQuestionGeneratorModal({ defaultCategory, settings, onSaveGenerated, notify }) {
-  const [category, setCategory] = useState(defaultCategory);
-  const [topic, setTopic] = useState('Sistem Pernapasan Manusia');
+  const [category, setCategory] = useState(defaultCategory || 'Matematika');
+  const [topic, setTopic] = useState(DEFAULT_TKA_TOPICS[defaultCategory] || DEFAULT_TKA_TOPICS.Matematika);
   const [difficulty, setDifficulty] = useState('HOTS');
-  const [qType, setQType] = useState('single'); // 'single' | 'complex' | 'matching' | 'true_false'
-  const [count, setCount] = useState(2);
-  const [mediaPreference, setMediaPreference] = useState('image'); // 'none' | 'image' | 'chart' | 'video' | 'mixed'
+  const [qType, setQType] = useState('single');
+  const [count, setCount] = useState(3);
+  const [mediaPreference, setMediaPreference] = useState('image');
   const [loading, setLoading] = useState(false);
   const [regeneratingImgIdx, setRegeneratingImgIdx] = useState(null);
   const [previewQuestions, setPreviewQuestions] = useState([]);
@@ -2892,6 +2876,28 @@ function GeminiQuestionGeneratorModal({ defaultCategory, settings, onSaveGenerat
     'Bahasa Indonesia': 'https://www.youtube.com/embed/PjKNllf0ClQ',
     'Soal Karakter': 'https://www.youtube.com/embed/PjKNllf0ClQ',
     'Soal Lingkungan Belajar': 'https://www.youtube.com/embed/PjKNllf0ClQ'
+  };
+
+  // Pemetaan Gaya Visual Khusus per Pelajaran TKA agar ilustrasi selalu relevan
+  const SUBJECT_VISUAL_DIRECTIONS = {
+    Matematika:
+      'Clean mathematical educational diagram on pure white background: geometric shapes, proportional fractions, measurement scales, or visual counting objects with clear geometric proportions. No random letters or gibberish text.',
+    'Bahasa Indonesia':
+      'Warm Indonesian elementary school storybook & reading comprehension illustration: expressive Indonesian children reading, discussing, or experiencing the story scene in a realistic Indonesian setting. No text bubbles or gibberish text.',
+    IPAS:
+      'Accurate elementary science & social studies textbook diagram: clear biological ecosystem, natural cycle, energy transformation, or Indonesian cultural diversity scene with clean visual arrows. No garbled words.',
+    'Soal Karakter':
+      'Positive character education illustration for Indonesian elementary students (Profil Pelajar Pancasila): children helping each other, fair group deliberation (musyawarah), honesty, and mutual respect at school. No text.',
+    'Soal Lingkungan Belajar':
+      'Safe, inclusive, and cheerful Indonesian elementary school classroom environment: teacher guiding diverse students collaboratively, clean library corner, anti-bullying supportive atmosphere. No text.'
+  };
+
+  const handleCategorySwitch = (newCat) => {
+    setCategory(newCat);
+    setTopic(DEFAULT_TKA_TOPICS[newCat] || '');
+    if (newCat === 'ALL_TKA' && count < 5) {
+      setCount(5);
+    }
   };
 
   // Helper cerdas yang mendukung API Key AIzaSy maupun AQ.
@@ -2936,87 +2942,62 @@ function GeminiQuestionGeneratorModal({ defaultCategory, settings, onSaveGenerat
     throw new Error(lastError);
   };
 
-  // Pencarian Gambar Ensiklopedia Akurat dari Wikimedia Commons
-  const searchWikimediaEducationalImage = async (englishSearchTerms = [], skipIndex = 0) => {
-    for (const term of englishSearchTerms) {
-      if (!term || term.trim().length < 3) continue;
-      try {
-        const apiUrl = `https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(
-          `filetype:bitmap|drawing ${term.trim()}`
-        )}&gsrnamespace=6&gsrlimit=8&prop=imageinfo&iiprop=url|mime|size&iiurlwidth=720&format=json&origin=*`;
-
-        const res = await fetch(apiUrl);
-        if (!res.ok) continue;
-        const data = await res.json();
-        const pages = data?.query?.pages;
-        if (!pages) continue;
-
-        const validCandidates = Object.values(pages)
-          .filter((page) => {
-            const title = (page?.title || '').toLowerCase();
-            const info = page?.imageinfo?.[0];
-            if (!info) return false;
-            // Filter ketat agar tidak mengambil ikon, bendera, foto orang acak, atau buah yang tidak relevan
-            const blockedWords = ['icon', 'logo', 'flag', 'symbol', 'portrait', 'headshot', 'button', 'arrow'];
-            if (blockedWords.some((w) => title.includes(w))) return false;
-            if ((info.width || 0) < 200 || (info.height || 0) < 150) return false;
-            return Boolean(info.thumburl || info.url);
-          })
-          .sort((a, b) => (a.index || 0) - (b.index || 0));
-
-        if (validCandidates.length > 0) {
-          const picked = validCandidates[skipIndex % validCandidates.length];
-          const info = picked.imageinfo[0];
-          return info.thumburl || info.url;
+  // Kompresi dataURL gambar agar ringan & aman disimpan di localStorage
+  const compressDataUrl = (rawDataUrl) =>
+    new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const maxW = 760;
+          const scale = img.width > maxW ? maxW / img.width : 1;
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round(img.width * scale);
+          canvas.height = Math.round(img.height * scale);
+          const ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          resolve(canvas.toDataURL('image/jpeg', 0.85));
+        } catch {
+          resolve(rawDataUrl);
         }
-      } catch {
-        // Lanjut ke kata kunci cadangan berikutnya
-      }
-    }
-    return null;
-  };
+      };
+      img.onerror = () => resolve(rawDataUrl);
+      img.src = rawDataUrl;
+    });
 
-  // Generator Diagram Vektor SVG Edukatif Berlabel Bahasa Indonesia
+  // Fallback cerdas: ilustrasi vektor SVG tematik khusus mata pelajaran TKA
   const generateCustomSvgDiagram = async (questionObj, topicStr, catStr, apiKey) => {
     try {
       const svgPayload = {
         contents: [{
           role: 'user',
           parts: [{
-            text: `Buatkan ilustrasi diagram edukatif SVG yang sangat jelas, rapi, berwarna cerah, dan akurat secara ilmiah untuk soal SD berikut:
-Mata Pelajaran: ${catStr}
-Topik Utama: ${topicStr}
+            text: `Buatkan ilustrasi diagram edukatif SVG (viewBox="0 0 640 360") yang rapi, berwarna cerah, dan akurat untuk soal TKA SD berikut:
+Komponen/Mata Pelajaran TKA: ${catStr}
+Topik Materi: ${topicStr}
 Stimulus Soal: ${questionObj.stimulus || ''}
-Pertanyaan: ${questionObj.question || ''}
+Pertanyaan Soal: ${questionObj.question || ''}
 Deskripsi Visual: ${questionObj.mediaCaption || ''}
 
-ATURAN WAJIB SVG:
-1. Tag pembuka WAJIB persis: <svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360">
-2. Buat latar belakang <rect width="640" height="360" rx="16" fill="#f8fafc"/>.
-3. Gambar diagram konsep/organ/objek yang persis diminta topik "${topicStr}" menggunakan bentuk geometris (<path>, <ellipse>, <circle>, <rect>, <polygon>, <line>) yang jelas dan proporsional.
-   - Jika topik Sistem Pernapasan Manusia: gambar batang trakea di tengah atas, cabang bronkus kiri & kanan, dua lobus paru-paru merah muda di kiri & kanan, gelembung alveolus, dan lengkungan otot diafragma di bawahnya, lengkap dengan garis penunjuk dan label teks Bahasa Indonesia (Hidung/Trakea, Bronkus, Paru-paru, Alveolus, Diafragma).
-4. Gunakan font-family="Arial, sans-serif" dengan ukuran huruf 13px-15px bold berwarna gelap (#0f172a) agar terbaca tajam oleh siswa SD.
-5. DILARANG memakai tag <image>, <script>, atau karakter & mentah (tulis "dan", bukan "&").
-6. Keluarkan HANYA kode <svg ...>...</svg> tanpa teks pembuka/penutup.`
+Aturan ketat sesuai mata pelajaran "${catStr}":
+- Jika Matematika: gambar bangun geometri presisi, pecahan visual terbagi rata, timbangan/penggaris ukur, atau diagram proporsional lengkap dengan angka/satuan yang disebut di soal.
+- Jika Bahasa Indonesia: gambar ilustrasi adegan cerita/situasi sesuai teks bacaan stimulus dengan karakter siswa SD Indonesia.
+- Jika IPAS: gambar diagram fenomena sains/ekosistem/siklus alam/sosial lengkap dengan panah alur dan label singkat bahasa Indonesia.
+- Jika Soal Karakter / Soal Lingkungan Belajar: gambar suasana positif sekolah/kelas inklusif dengan siswa SD yang sedang bekerja sama atau berdiskusi.
+- Gunakan elemen SVG standar (<rect>, <circle>, <ellipse>, <path>, <polygon>, <line>, <text>, <defs>, <linearGradient>).
+- JANGAN gunakan <image> eksternal.
+- Keluarkan HANYA kode <svg ...>...</svg> tanpa markdown atau penjelasan.`
           }]
-        }],
-        generationConfig: {
-          temperature: 0.2
-        }
+        }]
       };
-
       const res = await callGoogleAiEndpoint('gemini-2.5-flash', svgPayload, apiKey);
-      let svgText = res?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const svgText = res?.candidates?.[0]?.content?.parts?.[0]?.text || '';
       const match = svgText.match(/<svg[\s\S]*?<\/svg>/i);
       if (match) {
-        let cleanSvg = match[0]
-          .replace(/<script[\s\S]*?<\/script>/gi, '')
-          .replace(/&(?!amp;|lt;|gt;|quot;|apos;)/g, 'dan');
+        let cleanSvg = match[0];
         if (!cleanSvg.includes('xmlns=')) {
           cleanSvg = cleanSvg.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"');
-        }
-        if (!cleanSvg.includes('width=')) {
-          cleanSvg = cleanSvg.replace('<svg', '<svg width="640" height="360"');
         }
         return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(cleanSvg)}`;
       }
@@ -3026,66 +3007,97 @@ ATURAN WAJIB SVG:
     }
   };
 
-  // PIPELINE GAMBAR AKURAT: Wikimedia Commons Ensiklopedia -> Fallback Diagram SVG Kustom
-  const generateEducationalImage = async (questionObj, topicStr, catStr, apiKey, variantOffset = 0) => {
+  // TAHAP 1 & 2: Refiner Prompt Visual Khusus Pelajaran TKA + Generate Gambar Akurat
+  const generateEducationalImage = async (questionObj, topicStr, catStr, apiKey) => {
+    const subjectStyle =
+      SUBJECT_VISUAL_DIRECTIONS[catStr] || SUBJECT_VISUAL_DIRECTIONS.IPAS;
+
     try {
-      // Minta Gemini menerjemahkan topik & isi soal menjadi 3 frasa pencarian ilmiah Wikimedia Commons
-      const queryPayload = {
+      const refinerPayload = {
         contents: [{
           role: 'user',
           parts: [{
-            text: `Translate the exact scientific/educational visual subject of this Indonesian elementary school (SD) question into 3 precise English Wikimedia Commons search phrases.
-
-Subject: ${catStr}
-Main Topic: ${topicStr}
+            text: `You are an official Indonesian Ministry of Education (Kemendikbud) textbook illustrator director for elementary school (SD) TKA assessments.
+Create a concise, ultra-precise English image generation prompt (max 65 words) that visually depicts the EXACT scenario, mathematical model, story scene, or scientific concept in this question:
+TKA Subject: ${catStr}
+Subject Visual Direction: ${subjectStyle}
+Topic: ${topicStr}
 Question Stimulus: ${questionObj.stimulus || ''}
-Question Text: ${questionObj.question || ''}
-Visual Description: ${questionObj.mediaCaption || ''}
+Question Stem: ${questionObj.question || ''}
+Intended Visual Caption: ${questionObj.mediaCaption || ''}
 
-Rules:
-- Focus strictly on the main scientific/educational subject (e.g. for "Sistem Pernapasan Manusia", output ["Human respiratory system diagram", "Respiratory system anatomy", "Lungs trachea bronchi diagram"]).
-- NEVER output generic single words like "apple", "fruit", "food", "nature", or unrelated objects.
-- Output ONLY a valid JSON array of 3 English strings.`
+Strict Rules:
+- Depict the exact objects, quantities, shapes, characters, or processes described in the stimulus so students can observe the picture to answer the question.
+- For Matematika: show exact geometric figures, fraction bars, clocks, or objects in the exact counts mentioned.
+- For Bahasa Indonesia, Soal Karakter, Soal Lingkungan Belajar: depict Indonesian elementary school children (wearing red-and-white SD uniforms or neat casual clothes) in the exact story/school situation.
+- For IPAS: show a clear, accurate scientific/social illustration.
+- Absolutely NO garbled words, NO random text labels, clean bright educational vector illustration style.
+- Output ONLY the English prompt.`
           }]
+        }]
+      };
+
+      const refinerRes = await callGoogleAiEndpoint('gemini-2.5-flash', refinerPayload, apiKey);
+      const refinedPrompt =
+        refinerRes?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ||
+        `${subjectStyle} Topic: ${topicStr}. Scene: ${questionObj.mediaCaption || questionObj.question}`;
+
+      // Tahap 2A: Coba model Gemini Native Image Generation
+      const imgPayload = {
+        contents: [{
+          role: 'user',
+          parts: [{ text: refinedPrompt }]
         }],
         generationConfig: {
-          temperature: 0.1,
-          responseMimeType: 'application/json'
+          responseModalities: ['IMAGE', 'TEXT']
         }
       };
 
-      let searchPhrases = [];
+      const imageModels = [
+        'gemini-3.1-flash-image',
+        'gemini-2.5-flash-image',
+        'gemini-2.0-flash-exp-image-generation'
+      ];
+      for (const mName of imageModels) {
+        try {
+          const result = await callGoogleAiEndpoint(mName, imgPayload, apiKey, 'generateContent');
+          const part = result?.candidates?.[0]?.content?.parts?.find((p) => p.inlineData);
+          if (part?.inlineData?.data) {
+            const rawDataUrl = `data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`;
+            return await compressDataUrl(rawDataUrl);
+          }
+        } catch {
+          // Lanjut ke kandidat model gambar berikutnya
+        }
+      }
+
+      // Tahap 2B: Coba Imagen 3 (:predict)
       try {
-        const qRes = await callGoogleAiEndpoint('gemini-2.5-flash', queryPayload, apiKey);
-        const qText = qRes?.candidates?.[0]?.content?.parts?.[0]?.text || '[]';
-        const parsedPhrases = JSON.parse(qText.replace(/```json|```/gi, '').trim());
-        if (Array.isArray(parsedPhrases)) searchPhrases = parsedPhrases;
+        const imagenPayload = {
+          instances: [{ prompt: refinedPrompt }],
+          parameters: { sampleCount: 1, aspectRatio: '16:9' }
+        };
+        const imagenRes = await callGoogleAiEndpoint('imagen-3.0-generate-002', imagenPayload, apiKey, 'predict');
+        const b64 = imagenRes?.predictions?.[0]?.bytesBase64Encoded;
+        if (b64) {
+          return await compressDataUrl(`data:image/png;base64,${b64}`);
+        }
       } catch {
-        searchPhrases = [`${topicStr} diagram`, topicStr];
+        // Lanjut ke generator diagram vektor SVG khusus topik
       }
 
-      // Jika variantOffset ganjil, prioritaskan Diagram SVG buatan AI; jika genap, cari foto/diagram Wikimedia dulu
-      if (variantOffset % 2 === 0) {
-        const wikiImg = await searchWikimediaEducationalImage(searchPhrases, Math.floor(variantOffset / 2));
-        if (wikiImg) return wikiImg;
-      }
-
-      // Fallback atau mode SVG kustom berlabel Bahasa Indonesia
-      const svgImg = await generateCustomSvgDiagram(questionObj, topicStr, catStr, apiKey);
-      if (svgImg) return svgImg;
-
-      // Cadangan terakhir jika SVG gagal
-      return await searchWikimediaEducationalImage(searchPhrases, variantOffset + 1);
+      // Tahap 2C: Buat ilustrasi vektor SVG tematik khusus soal via gemini-2.5-flash
+      return await generateCustomSvgDiagram(questionObj, topicStr, catStr, apiKey);
     } catch {
       return await generateCustomSvgDiagram(questionObj, topicStr, catStr, apiKey);
     }
   };
 
-  // Regenerate gambar hanya untuk 1 butir soal di Preview
-  const handleRegenerateSingleImage = async (index) => {
+  // Regenerasi ulang gambar hanya untuk satu butir soal pada Preview
+  const handleRegenerateSinglePreviewImage = async (index) => {
     const apiKey = (settings.geminiApiKey || '').trim();
     if (!apiKey) {
-      notify('API Key Gemini belum diisi di menu Pengaturan.', 'error');
+      notify('API Key Gemini belum diisi di menu Pengaturan & Anti-Cheat.', 'error');
       return;
     }
     const targetQ = previewQuestions[index];
@@ -3093,17 +3105,16 @@ Rules:
 
     setRegeneratingImgIdx(index);
     try {
-      const nextVariant = (targetQ._imgVariant || 0) + 1;
-      const newUrl = await generateEducationalImage(targetQ, topic, category, apiKey, nextVariant);
-      if (newUrl) {
+      const newImgUrl = await generateEducationalImage(targetQ, topic, targetQ.category, apiKey);
+      if (newImgUrl) {
         setPreviewQuestions((prev) =>
           prev.map((item, idx) =>
-            idx === index ? { ...item, mediaType: 'image', mediaUrl: newUrl, _imgVariant: nextVariant } : item
+            idx === index ? { ...item, mediaType: 'image', mediaUrl: newImgUrl } : item
           )
         );
-        notify(`Gambar ilustrasi Soal #${index + 1} berhasil diperbarui!`);
+        notify(`Gambar ilustrasi untuk Soal #${index + 1} (${targetQ.category}) berhasil diperbarui!`);
       } else {
-        notify('Tidak ditemukan gambar alternatif, silakan coba klik lagi atau upload manual.', 'error');
+        notify('Tidak dapat memperbarui gambar saat ini. Coba lagi.', 'error');
       }
     } finally {
       setRegeneratingImgIdx(null);
@@ -3121,51 +3132,68 @@ Rules:
         return;
       }
 
+      // Pemetaan Mata Pelajaran/Komponen TKA per nomor soal
+      const plannedSubjectsList = Array.from({ length: count }, (_, idx) =>
+        category === 'ALL_TKA' ? TKA_SUBJECTS[idx % TKA_SUBJECTS.length] : category
+      );
+
+      // Pemetaan Media per nomor soal
       const plannedMediaList = Array.from({ length: count }, (_, idx) =>
         mediaPreference === 'mixed' ? ['image', 'chart', 'video'][idx % 3] : mediaPreference
       );
 
-      const mediaPlanDescription = plannedMediaList
-        .map((m, idx) => `Soal ke-${idx + 1}: WAJIB menggunakan media "${m}"`)
+      const perQuestionPlan = plannedSubjectsList
+        .map(
+          (subj, idx) =>
+            `Soal ke-${idx + 1}: Komponen/Mapel WAJIB "${subj}", Media WAJIB "${plannedMediaList[idx]}"`
+        )
         .join('; ');
 
-      const systemPrompt = `Anda adalah pakar pembuat soal Asesmen Nasional (ANBK) & Tes Kemampuan Akademik (TKA) Kemendikbud RI tingkat SD/MI.
-Buatkan tepat ${count} butir soal yang sangat akurat secara konsep keilmuan/kurikulum SD dalam format JSON valid.
-Kategori: ${category}
-Topik Spesifik: ${topic}
+      const systemPrompt = `Anda adalah tim pakar pembuat soal resmi Asesmen Nasional (ANBK) & Tes Kemampuan Akademik (TKA) Kemendikbud RI jenjang SD/MI.
+Buatkan tepat ${count} butir soal berkualitas tinggi dan akurat secara keilmuan dalam format JSON valid.
+
+Rencana Komponen/Mapel & Media Per Soal (WAJIB DIIKUTI PERSIS):
+${perQuestionPlan}
+
+Fokus Topik / Tema Umum: ${topic}
 Tingkat Kesulitan: ${difficulty}
 Tipe Soal: ${qType} (pilihan: single, complex, matching, true_false)
-Rencana Media Per Soal: ${mediaPlanDescription}.
 
-Aturan Ketat:
-1. Buat stimulus cerita/kasus nyata yang mendidik dan sesuai usia siswa SD kelas 5-6 tentang topik "${topic}".
-2. SINKRONISASI MEDIA WAJIB:
-   - Jika soal menggunakan media "image": stimulus dan pertanyaan WAJIB merujuk pada gambar ilustrasi materi "${topic}" (contoh: "Perhatikan gambar organ pernapasan manusia berikut..."), JANGAN menyebut grafik batang! Isi mediaCaption dengan keterangan gambar yang akurat sesuai "${topic}".
-   - Jika soal menggunakan media "chart": stimulus dan pertanyaan WAJIB merujuk pada data grafik batang di chartData (title, labels minimal 4 label, values minimal 4 angka yang konsisten dengan kunci jawaban).
-   - Jika soal menggunakan media "video": stimulus dan pertanyaan merujuk pada tayangan video edukasi tentang "${topic}".
-   - Jika soal menggunakan media "none": seluruh informasi ada pada teks stimulus.
-3. WAJIB MENGISI OPSI & KUNCI JAWABAN LENGKAP sesuai tipe soal "${qType}":
-   - Jika "${qType}" adalah "single": WAJIB isi "options" dengan 4 kalimat pilihan jawaban yang bermakna dan "correctIndex" (angka 0 sampai 3).
-   - Jika "${qType}" adalah "complex": WAJIB isi "options" dengan 4-5 kalimat pilihan jawaban yang bermakna dan "complexCorrectIndices" (array minimal 2 indeks benar, misal [0, 2]).
-   - Jika "${qType}" adalah "matching": WAJIB isi "leftItems" (3 konsep), "rightItems" (3 pasangan acak), dan "matchingPairs" (3 pasangan indeks).
-   - Jika "${qType}" adalah "true_false": WAJIB isi "statements" (3 pernyataan) dan "trueFalseAnswers" (array 3 boolean).`;
+Pedoman Spesifik Tiap Komponen TKA:
+- "Matematika": Fokus pada numerasi (bilangan, pecahan, geometri bangun datar/ruang, pengukuran, atau analisis data/grafik) dengan perhitungan yang 100% tepat secara matematis.
+- "Bahasa Indonesia": Fokus pada literasi membaca (wacana narasi/informasi singkat, menemukan informasi tersurat/tersirat, ide pokok, atau simpulan bacaan).
+- "IPAS": Fokus pada konsep sains (makhluk hidup, ekosistem, energi, wujud zat, bumi & antariksa) atau ilmu sosial (keragaman budaya, sejarah, kegiatan ekonomi) yang akurat.
+- "Soal Karakter": Fokus pada studi kasus sikap sehari-hari siswa SD yang mencerminkan Profil Pelajar Pancasila (beriman, berkebinekaan global, gotong royong, mandiri, bernalar kritis, kreatif).
+- "Soal Lingkungan Belajar": Fokus pada situasi iklim keamanan sekolah, anti-perundungan, toleransi, dan kualitas pembelajaran di kelas.
+
+Aturan Ketat Sinkronisasi Media & Jawaban:
+1. Isi field "subjectCategory" pada setiap item JSON sesuai persis dengan Komponen/Mapel yang ditugaskan pada rencana di atas.
+2. Jika media "image": stimulus dan pertanyaan WAJIB merujuk langsung pada gambar ilustrasi (contoh: "Perhatikan gambar ilustrasi berikut..."), JANGAN menyebut grafik batang! Isi "mediaCaption" dengan deskripsi visual rinci tentang apa yang harus digambar agar siswa bisa menjawab soal dari gambar tersebut.
+3. Jika media "chart": stimulus dan pertanyaan WAJIB merujuk pada data grafik batang di "chartData" (title, labels minimal 4 label, values minimal 4 angka yang konsisten dengan kunci jawaban).
+4. Jika media "video": stimulus dan pertanyaan merujuk pada tayangan video edukasi terkait materi soal.
+5. WAJIB MENGISI OPSI & KUNCI JAWABAN LENGKAP sesuai tipe soal "${qType}":
+   - "single": isi "options" (4 kalimat pilihan bermakna) dan "correctIndex" (0..3).
+   - "complex": isi "options" (4-5 kalimat pilihan bermakna) dan "complexCorrectIndices" (array minimal 2 indeks benar).
+   - "matching": isi "leftItems" (3 premis), "rightItems" (3 pasangan), dan "matchingPairs" (3 pasangan indeks).
+   - "true_false": isi "statements" (3 pernyataan) dan "trueFalseAnswers" (array 3 boolean).`;
 
       const payload = {
         contents: [{
           role: 'user',
           parts: [{
-            text: `Buatkan ${count} soal TKA SD kategori ${category} topik "${topic}" tipe ${qType} kesulitan ${difficulty}. Ikuti rencana media: ${mediaPlanDescription}. Wajib isi semua opsi jawaban lengkap dan kunci jawaban yang akurat.`
+            text: `Buatkan ${count} soal TKA SD tipe ${qType} tingkat ${difficulty} dengan fokus topik "${topic}". Ikuti rencana berikut secara ketat: ${perQuestionPlan}. Pastikan soal, ilustrasi mediaCaption, opsi jawaban, dan kunci jawaban akurat 100%.`
           }]
         }],
         systemInstruction: { parts: [{ text: systemPrompt }] },
         generationConfig: {
-          temperature: 0.3,
+          temperature: 0.35,
           responseMimeType: 'application/json',
           responseSchema: {
             type: 'ARRAY',
             items: {
               type: 'OBJECT',
               properties: {
+                subjectCategory: { type: 'STRING' },
                 stimulus: { type: 'STRING' },
                 question: { type: 'STRING' },
                 mediaType: { type: 'STRING' },
@@ -3199,7 +3227,7 @@ Aturan Ketat:
                 trueFalseAnswers: { type: 'ARRAY', items: { type: 'BOOLEAN' } },
                 explanation: { type: 'STRING' }
               },
-              required: ['stimulus', 'question', 'mediaCaption', 'options', 'correctIndex', 'explanation']
+              required: ['subjectCategory', 'stimulus', 'question', 'mediaCaption', 'options', 'correctIndex', 'explanation']
             }
           }
         }
@@ -3217,17 +3245,18 @@ Aturan Ketat:
 
       const formatted = await Promise.all(
         parsed.map(async (item, idx) => {
+          const assignedSubject = plannedSubjectsList[idx] || 'IPAS';
           const chosenMedia = plannedMediaList[idx] || 'none';
 
           let resolvedImageUrl = '';
           if (chosenMedia === 'image') {
-            const generatedImg = await generateEducationalImage(item, topic, category, apiKey, idx * 2);
+            const generatedImg = await generateEducationalImage(item, topic, assignedSubject, apiKey);
             resolvedImageUrl = generatedImg || '';
           }
 
           return {
             id: `q-ai-${Date.now()}-${idx}`,
-            category,
+            category: assignedSubject,
             type: qType,
             difficulty,
             weight: Math.round(100 / count),
@@ -3238,16 +3267,15 @@ Aturan Ketat:
               chosenMedia === 'image'
                 ? resolvedImageUrl
                 : chosenMedia === 'video'
-                ? CURATED_VIDEOS[category]
+                ? CURATED_VIDEOS[assignedSubject] || CURATED_VIDEOS.IPAS
                 : '',
-            mediaCaption: item.mediaCaption || `Ilustrasi Materi ${topic} • ${category}`,
-            _imgVariant: idx * 2,
+            mediaCaption: item.mediaCaption || `Ilustrasi Materi ${assignedSubject}`,
             chartData:
               chosenMedia === 'chart'
                 ? item.chartData?.labels?.length
                   ? item.chartData
                   : {
-                      title: `Diagram Data: ${topic}`,
+                      title: `Diagram Data: ${assignedSubject}`,
                       labels: ['Data 1', 'Data 2', 'Data 3', 'Data 4'],
                       values: [35, 65, 80, 55]
                     }
@@ -3286,7 +3314,11 @@ Aturan Ketat:
       );
 
       setPreviewQuestions(formatted);
-      notify(`Berhasil! AI Gemini menyusun ${formatted.length} soal akurat sesuai topik "${topic}".`);
+      const labelInfo =
+        category === 'ALL_TKA'
+          ? 'Semua Pelajaran & Komponen TKA'
+          : `Mata Pelajaran ${category}`;
+      notify(`Berhasil! AI Gemini menyusun ${formatted.length} soal & gambar presisi untuk ${labelInfo}.`);
     } catch (err) {
       notify(`Gagal terhubung ke AI Google: ${err.message}`, 'error');
     } finally {
@@ -3302,8 +3334,8 @@ Aturan Ketat:
             <Sparkles className="w-6 h-6 text-lime-300" />
           </div>
           <div>
-            <h3 className="text-lg font-extrabold text-[#0b2545]">Generator Soal Otomatis AI Gemini v3.1</h3>
-            <p className="text-xs text-slate-600">Dilengkapi gambar ensiklopedia Wikimedia & diagram SVG edukasi presisi sesuai materi.</p>
+            <h3 className="text-lg font-extrabold text-[#0b2545]">Generator Soal & Gambar AI Seluruh Pelajaran TKA</h3>
+            <p className="text-xs text-slate-600">Mendukung Matematika, Bahasa Indonesia, IPAS, Survei Karakter & Lingkungan Belajar dengan ilustrasi visual spesifik per pelajaran.</p>
           </div>
         </div>
         <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-extrabold">
@@ -3314,21 +3346,26 @@ Aturan Ketat:
       {/* Generator Controls */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div>
-          <label className="block text-xs font-bold mb-1">Kategori / Mata Pelajaran</label>
-          <select value={category} onChange={(e) => setCategory(e.target.value)} className="w-full p-2.5 rounded-xl border-2 border-indigo-200 text-xs font-bold">
-            {['IPAS', 'Matematika', 'Bahasa Indonesia', 'Soal Karakter', 'Soal Lingkungan Belajar'].map((c) => (
+          <label className="block text-xs font-bold mb-1">Komponen / Mata Pelajaran TKA</label>
+          <select
+            value={category}
+            onChange={(e) => handleCategorySwitch(e.target.value)}
+            className="w-full p-2.5 rounded-xl border-2 border-indigo-300 bg-indigo-50/70 text-xs font-extrabold text-indigo-950"
+          >
+            <option value="ALL_TKA">★ Semua Komponen TKA (Campuran Proporsional)</option>
+            {TKA_SUBJECTS.map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
         </div>
 
         <div className="sm:col-span-2">
-          <label className="block text-xs font-bold mb-1">Topik / Materi Pokok</label>
+          <label className="block text-xs font-bold mb-1">Topik / Materi Pokok Sesuai Mata Pelajaran</label>
           <input
             type="text"
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
-            placeholder="Contoh: Sistem Pernapasan Manusia, Siklus Air, Pecahan Senilai..."
+            placeholder="Contoh: Pecahan & Luas Bangun Datar, Ide Pokok Bacaan, Ekosistem, Gotong Royong..."
             className="w-full p-2.5 rounded-xl border-2 border-indigo-200 text-xs font-semibold"
           />
         </div>
@@ -3355,7 +3392,7 @@ Aturan Ketat:
         <div>
           <label className="block text-xs font-bold mb-1">Aset Multimedia Stimulus</label>
           <select value={mediaPreference} onChange={(e) => setMediaPreference(e.target.value)} className="w-full p-2.5 rounded-xl border-2 border-indigo-300 bg-indigo-50 text-xs font-extrabold text-indigo-950">
-            <option value="image">Gambar / Diagram Edukasi Sesuai Materi</option>
+            <option value="image">Gambar Ilustrasi AI Akurat Sesuai Mapel</option>
             <option value="mixed">Kombinasi Lengkap (Gambar + Grafik + Video)</option>
             <option value="chart">Grafik / Diagram Batang Interaktif</option>
             <option value="video">Video Pembelajaran (YouTube)</option>
@@ -3375,6 +3412,11 @@ Aturan Ketat:
             onChange={(e) => setCount(Math.max(1, Math.min(10, Number(e.target.value))))}
             className="w-20 p-2 rounded-xl border-2 border-indigo-200 text-xs font-extrabold text-center"
           />
+          {category === 'ALL_TKA' && (
+            <span className="text-[11px] text-indigo-700 font-semibold">
+              (Otomatis dibagi merata ke Matematika, B. Indonesia, IPAS, Karakter & Lingkungan Belajar)
+            </span>
+          )}
         </div>
 
         <button
@@ -3384,11 +3426,11 @@ Aturan Ketat:
           className="px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-emerald-600 hover:opacity-95 text-white font-extrabold text-xs shadow-lg flex items-center gap-2"
         >
           <Sparkles className={`w-4 h-4 text-lime-300 ${loading ? 'animate-spin' : ''}`} />
-          {loading ? 'AI Gemini Sedang Menyusun Soal & Gambar Materi...' : 'Generate Soal Sekarang'}
+          {loading ? 'AI Gemini Sedang Menyusun Soal & Gambar Pelajaran TKA...' : 'Generate Soal & Gambar Akurat'}
         </button>
       </div>
 
-      {/* PREVIEW, EDIT MANUAL & SAVE GENERATED QUESTIONS */}
+      {/* PREVIEW, REGENERATE GAMBAR, EDIT MANUAL & SAVE GENERATED QUESTIONS */}
       {previewQuestions.length > 0 && (
         <div className="pt-4 border-t-2 border-indigo-200 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
@@ -3400,7 +3442,7 @@ Aturan Ketat:
               onClick={() => onSaveGenerated(previewQuestions)}
               className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md"
             >
-              ✓ Simpan Semua ke Bank Soal
+              ✓ Simpan Semua ke Bank Soal (Otomatis Masuk ke Tab Masing-Masing Mapel)
             </button>
           </div>
 
@@ -3422,19 +3464,24 @@ Aturan Ketat:
               ) : (
                 <>
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="text-xs font-extrabold text-indigo-900">
-                      Preview Soal #{i + 1} ({pq.mediaType})
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="px-2.5 py-1 rounded-lg bg-[#0b2545] text-lime-300 text-xs font-extrabold">
+                        Soal #{i + 1} • {pq.category}
+                      </span>
+                      <span className="px-2 py-0.5 rounded bg-indigo-100 text-indigo-900 text-[11px] font-bold">
+                        Media: {pq.mediaType}
+                      </span>
+                    </div>
                     <div className="flex items-center gap-2">
                       {pq.mediaType === 'image' && (
                         <button
                           type="button"
                           disabled={regeneratingImgIdx === i}
-                          onClick={() => handleRegenerateSingleImage(i)}
-                          className="px-3 py-1.5 rounded-lg bg-sky-100 hover:bg-sky-600 text-sky-900 hover:text-white font-bold text-xs flex items-center gap-1 transition"
+                          onClick={() => handleRegenerateSinglePreviewImage(i)}
+                          className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold text-xs flex items-center gap-1 transition"
                         >
                           <RefreshCw className={`w-3.5 h-3.5 ${regeneratingImgIdx === i ? 'animate-spin' : ''}`} />
-                          {regeneratingImgIdx === i ? 'Mencari Gambar...' : 'Ganti Gambar AI / SVG'}
+                          {regeneratingImgIdx === i ? 'Menggambar Ulang...' : 'Buat Ulang Gambar Ini'}
                         </button>
                       )}
                       <button
@@ -3480,7 +3527,7 @@ Aturan Ketat:
 function PackagesAndClassesManager({ packages, setPackages, students, setStudents, notify }) {
   const [pkgName, setPkgName] = useState('');
   const [duration, setDuration] = useState(60);
-  const [selectedCats, setSelectedCats] = useState(['IPAS', 'Matematika', 'Bahasa Indonesia', 'Soal Karakter', 'Soal Lingkungan Belajar']);
+  const [selectedCats, setSelectedCats] = useState([...TKA_SUBJECTS]);
 
   const handleAddPackage = (e) => {
     e.preventDefault();
@@ -3533,7 +3580,7 @@ function PackagesAndClassesManager({ packages, setPackages, students, setStudent
         <div>
           <label className="block text-xs font-bold mb-1.5">Rangkaian Kategori Soal dalam Paket:</label>
           <div className="flex flex-wrap gap-2">
-            {['IPAS', 'Matematika', 'Bahasa Indonesia', 'Soal Karakter', 'Soal Lingkungan Belajar'].map((cat) => {
+            {TKA_SUBJECTS.map((cat) => {
               const checked = selectedCats.includes(cat);
               return (
                 <label key={cat} className={`px-3 py-1.5 rounded-xl text-xs font-bold border cursor-pointer flex items-center gap-1.5 ${checked ? 'bg-[#0b2545] text-lime-300 border-[#0b2545]' : 'bg-lime-50 border-lime-300'}`}>
@@ -3559,7 +3606,6 @@ function PackagesAndClassesManager({ packages, setPackages, students, setStudent
         </button>
       </form>
 
-      {/* Active Packages List */}
       <div className="bg-white/95 rounded-2xl p-5 shadow-lg border-2 border-lime-400 space-y-3">
         <h3 className="text-base font-extrabold text-[#0b2545]">Daftar Paket Ujian Tersedia</h3>
         {packages.map((pkg) => (
@@ -3597,12 +3643,8 @@ function PackagesAndClassesManager({ packages, setPackages, students, setStudent
 // ============================================================================
 
 function UserManagementView({ teachers, setTeachers, students, setStudents, settings, notify }) {
-  const [subTab, setSubTab] = useState('students'); // 'students' | 'teachers' | 'cards'
-
-  // Add Teacher Form State
+  const [subTab, setSubTab] = useState('students');
   const [tForm, setTForm] = useState({ nip: '', name: '', subject: '', username: '', password: '' });
-
-  // Add Student Form State
   const [sForm, setSForm] = useState({
     school: settings.schoolName, nisn: '', name: '', kelas: 'VI-A', gender: 'Laki-laki', password: '12345', sesi: 'Sesi 1'
   });
@@ -3642,7 +3684,7 @@ function UserManagementView({ teachers, setTeachers, students, setStudents, sett
       const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
       const imported = [];
       lines.forEach((line, idx) => {
-        if (idx === 0 && line.toLowerCase().includes('nisn')) return; // skip header
+        if (idx === 0 && line.toLowerCase().includes('nisn')) return;
         const cols = line.split(/[,;]/);
         if (cols.length >= 2) {
           imported.push({
@@ -3694,7 +3736,6 @@ function UserManagementView({ teachers, setTeachers, students, setStudents, sett
         </button>
       </div>
 
-      {/* SUBTAB 1: STUDENTS */}
       {subTab === 'students' && (
         <div className="space-y-5">
           <form onSubmit={handleAddStudent} className="bg-white/95 rounded-2xl p-5 shadow-lg border-2 border-lime-300 space-y-3">
@@ -3768,7 +3809,6 @@ function UserManagementView({ teachers, setTeachers, students, setStudents, sett
         </div>
       )}
 
-      {/* SUBTAB 2: TEACHERS */}
       {subTab === 'teachers' && (
         <div className="space-y-5">
           <form onSubmit={handleAddTeacher} className="bg-white/95 rounded-2xl p-5 shadow-lg border-2 border-lime-300 space-y-3">
@@ -3831,7 +3871,6 @@ function UserManagementView({ teachers, setTeachers, students, setStudents, sett
         </div>
       )}
 
-      {/* SUBTAB 3: PRINTABLE PARTICIPANT LOGIN CARDS */}
       {subTab === 'cards' && (
         <div className="bg-white/95 rounded-2xl p-6 shadow-lg border-2 border-lime-400 space-y-4">
           <div className="flex items-center justify-between">
@@ -3886,7 +3925,6 @@ function ExamResultsAndAnalytics({ students, questions, settings, notify }) {
 
   return (
     <div className="space-y-5">
-      {/* Results Table */}
       <div className="bg-white/95 rounded-2xl p-5 shadow-lg border-2 border-lime-400 space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
@@ -3943,7 +3981,6 @@ function ExamResultsAndAnalytics({ students, questions, settings, notify }) {
         </div>
       </div>
 
-      {/* Item Difficulty Analysis */}
       <div className="bg-white/95 rounded-2xl p-5 shadow-lg border-2 border-lime-400 space-y-3">
         <h3 className="text-base font-extrabold text-[#0b2545]">Analisis Butir Soal & Tingkat Kesukaran</h3>
         <div className="overflow-x-auto">
@@ -3991,7 +4028,6 @@ function SystemSettingsView({ settings, setSettings, notify }) {
   const [draft, setDraft] = useState(settings);
   const [showKey, setShowKey] = useState(false);
 
-  // Sinkronkan hanya token & hitung mundur token agar input API Key tidak tertimpa setiap detik
   useEffect(() => {
     setDraft((prev) => ({
       ...prev,
@@ -4047,7 +4083,6 @@ function SystemSettingsView({ settings, setSettings, notify }) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {/* Exam Title */}
         <div>
           <label className="block text-xs font-bold mb-1">Nama TKA / Judul Ujian Nasional</label>
           <input
@@ -4058,7 +4093,6 @@ function SystemSettingsView({ settings, setSettings, notify }) {
           />
         </div>
 
-        {/* School Name */}
         <div>
           <label className="block text-xs font-bold mb-1">Nama Satuan Pendidikan / Sekolah</label>
           <input
@@ -4069,7 +4103,6 @@ function SystemSettingsView({ settings, setSettings, notify }) {
           />
         </div>
 
-        {/* Gemini API Key Input */}
         <div>
           <label className="block text-xs font-bold mb-1">Konfigurasi Google Gemini API Key (AIzaSy... / AQ....)</label>
           <div className="relative">
@@ -4090,7 +4123,6 @@ function SystemSettingsView({ settings, setSettings, notify }) {
           </div>
         </div>
 
-        {/* Unlock Screen PIN */}
         <div>
           <label className="block text-xs font-bold mb-1">Kode PIN Buka Blokir Layar Pengawas</label>
           <input
@@ -4102,7 +4134,6 @@ function SystemSettingsView({ settings, setSettings, notify }) {
         </div>
       </div>
 
-      {/* Token Release Card */}
       <div className="p-4 rounded-2xl bg-[#0b2545] text-white flex flex-wrap items-center justify-between gap-4">
         <div>
           <span className="text-[11px] uppercase tracking-wider text-lime-300 font-bold block">Token Rilis Ujian Aktif</span>
@@ -4120,7 +4151,6 @@ function SystemSettingsView({ settings, setSettings, notify }) {
         </button>
       </div>
 
-      {/* Toggle Switches */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {[
           { key: 'showScoreAfterExam', label: 'Tampilkan Nilai Langsung Setelah Siswa Selesai Ujian' },
